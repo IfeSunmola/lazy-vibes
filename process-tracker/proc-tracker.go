@@ -1,12 +1,15 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/process"
 	"math"
 	"os"
+	"os/exec"
+	"strings"
 	"time"
 )
 
@@ -15,9 +18,19 @@ const (
 	defaultUsagePercent = 999
 	defaultTime         = 3240000
 	defaultName         = "-------"
-	defaultMaxCPUUsage  = 80.0
-	defaultMaxMemUsage  = 10.0
-	defaultMaxTime      = 10 * time.Minute
+	defaultMaxCPUUsage  = 2.9
+	defaultMaxMemUsage  = 50.0
+	defaultMaxTime      = 6 * time.Minute
+)
+
+const (
+	// column names
+	cPid  = "PID"
+	cUser = "USER"
+	cName = "NAME"
+	cCPU  = "CPU %"
+	cMem  = "MEM %"
+	cTime = "TIME"
 )
 
 func currentTime() string {
@@ -40,16 +53,17 @@ func getTimeStr(seconds float64) string {
 	return fmt.Sprintf("%02d:%02d:%02d", h, m, s)
 }
 
-func checkProcesses() error {
-	fmt.Printf("Process tracker output (%s)\n", currentTime())
+func checkProcesses() (string, error) {
 	printer := table.NewWriter()
-	printer.SetOutputMirror(os.Stdout)
-	printer.AppendHeader(table.Row{"PID", "USER", "NAME", "CPU %", "MEM %", "TIME"})
+	output := bytes.NewBufferString("")
+	printer.SetOutputMirror(output) // save in variable, not stdout
+	printer.AppendHeader(table.Row{cPid, cUser, cName, cCPU, cMem, cTime})
 	printer.SetAutoIndex(true)
+	printer.SortBy([]table.SortBy{{Name: cCPU, Mode: table.Dsc}})
 
 	pids, err := process.Pids()
 	if err != nil {
-		return fmt.Errorf("couldn't get all pids: %w", err)
+		return "", fmt.Errorf("couldn't get all pids: %w", err)
 	}
 
 	for _, pid := range pids {
@@ -96,16 +110,42 @@ func checkProcesses() error {
 			procOwner = getFormattedOwner(procOwner)
 
 			printer.AppendRow(table.Row{pid, procOwner, procName, cpuUsage, memUsage, timeStr})
+			output.Reset()   // reset or else it will append to previous output
+			printer.Render() // save in "output" variable
 		}
 	}
-	printer.Render()
-	return nil
+	// at this point, if there are any "bad" process, output will contain the rendered table
+	// if not, it will be empty
+	return output.String(), nil
 }
 
 func main() {
+	fmt.Println("Process Tracker started")
 	for range time.Tick(defaultInterval) { // run loop content every defaultInterval seconds
-		if err := checkProcesses(); err != nil {
-			fmt.Printf("Error: %v", err)
+		output, err := checkProcesses()
+		if err != nil {
+			fmt.Printf("Error while checking proccesses : %v", err)
+			fmt.Println("Program will exit now")
+			os.Exit(1)
+		}
+
+		output = strings.TrimSpace(output)
+
+		if output != "" { // there are some "bad" processes, send notification
+			// send GUI notification
+			_, err := exec.Command("notify-send", "-u", "critical", "Some processes are running wild!").Output()
+			if err != nil {
+				fmt.Println("Couldn't send notification:", err)
+				fmt.Println("Do you have notify-send installed?")
+			}
+
+			// send broadcast message across logged in shells
+			title := fmt.Sprintf("Process Tracker output at %s\n", currentTime())
+			_, err = exec.Command("wall", title, output).Output()
+			if err != nil {
+				fmt.Println("Couldn't send broadcast message:", err)
+				fmt.Println("Do you have wall installed?")
+			}
 		}
 	}
 }
