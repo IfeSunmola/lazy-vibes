@@ -8,7 +8,7 @@ any way to save the grades.
 
 ## Usage
 
-`./tracker-{os-arch} <path_to_file>`
+`./proc-tracker-platform-arch <path_to_file>`
 
 The file:
 
@@ -23,14 +23,13 @@ The file:
 
 1. You don't need to install go
 2. Download your version from the `release` section on the repo homepage (if I can figure it out).
-   1. Try the amd64 version first
+    1. Try the amd64 version first
 3. There's no gui, so run from command line
 
-## If you hate me and want to compile it yourself (racially motivated action)
+## Build and compile yourself because you don't trust me
 
-1. Run the `build-all.sh` script or
-2. Compile for 64-bit linux: `env GOOS=linux GOARCH=amd64 go build -o tracker-linux-amd64 tracker.go`
-3. Compile for 64-bit windows: `env GOOS=windows GOARCH=amd64 go build -o tracker-win-amd64.exe tracker.go`
-4. Compile for 64-bit mac: `env GOOS=darwin GOARCH=amd64 go build -o tracker-mac-amd64 tracker.go`
-5. Go obviously needs to be installed**
-6. If the generated binary doesn't work, you're probably on arm65. Change the value of GOARCH to arm64**
+1. The code was written with go version 1.20.3. So, you need to have that version or higher
+    1. I didn't really look much into the versions, so it might work with older versions
+2. See Makefile, and note your platform and architecture. Try `amd64` version first
+3. run `make <grade-tracker-platform-arch>`
+4. or you can simply run `make` and try everything to find which works
