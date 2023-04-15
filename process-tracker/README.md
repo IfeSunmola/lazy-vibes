@@ -41,7 +41,7 @@ See `process-tracker -h` for usage
          -gui
             To enable or disable GUI notifications. 'notify-send' is needed (default true)
          -i duration
-            Interval between each check (default 10s)
+            Interval between each check (default 2m0s)
          -mem float
             Max memory usage % to trigger notification (default 70)
          -o string

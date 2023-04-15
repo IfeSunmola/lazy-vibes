@@ -33,7 +33,7 @@ const (
 
 var (
 	// cmd line args flags
-	interval       = flag.Duration("i", 10*time.Second, "Interval between each check")
+	interval       = flag.Duration("i", 2*time.Minute, "Interval between each check")
 	sortBy         = flag.String("s", cCPU, "Which column to sort by")
 	sortOrder      = flag.String("o", "dsc", "Sort order. 'asc' or 'dsc'")
 	maxCPU         = flag.Float64("cpu", 70, "Max CPU usage % to trigger notification")
