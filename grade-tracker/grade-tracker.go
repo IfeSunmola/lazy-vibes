@@ -14,7 +14,7 @@ func usage(msg string) {
 	fmt.Println("  ", os.Args[0], " <file_name>")
 }
 
-func check(e error) {
+func checkError(e error) {
 	if e != nil {
 		fmt.Println(e)
 		os.Exit(1)
@@ -28,8 +28,13 @@ func main() {
 	}
 
 	file, err := os.Open(os.Args[1])
-	check(err)
-	defer file.Close()
+	checkError(err)
+	defer func(file *os.File) {
+		err := file.Close()
+		if err != nil {
+			fmt.Println(err)
+		}
+	}(file)
 
 	fmt.Println("Starting report for", os.Args[1])
 	fmt.Println("========================================================")
@@ -64,13 +69,13 @@ func main() {
 		name := strings.TrimSpace(fields[0])
 
 		achieved, err := strconv.ParseFloat(strings.TrimSpace(fields[1]), 32)
-		check(err)
+		checkError(err)
 
 		possible, err := strconv.ParseFloat(strings.TrimSpace(fields[2]), 32)
-		check(err)
+		checkError(err)
 
 		final, err := strconv.ParseFloat(strings.TrimSpace(fields[3]), 32)
-		check(err)
+		checkError(err)
 
 		if achieved > possible {
 			fmt.Println("Achieved is greater than possible for", name)
