@@ -11,13 +11,13 @@ import (
 )
 
 const (
-	defaultInterval     = 10 * time.Minute
+	defaultInterval     = 10 * time.Second
 	defaultUsagePercent = 999
 	defaultTime         = 3240000
 	defaultName         = "-------"
 	defaultMaxCPUUsage  = 80.0
-	defaultMaxMemUsage  = 3.0
-	defaultMaxTime      = 10
+	defaultMaxMemUsage  = 10.0
+	defaultMaxTime      = 10 * time.Minute
 )
 
 func currentTime() string {
@@ -82,7 +82,7 @@ func checkProcesses() error {
 		timeStr := getTimeStr(totalTime)
 
 		if cpuUsage >= defaultMaxCPUUsage || memUsage >= defaultMaxMemUsage ||
-			totalTime >= defaultMaxTime {
+			totalTime >= defaultMaxTime.Seconds() {
 
 			procName, err := proc.Name()
 			if err != nil {
