@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"flag"
 	"fmt"
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/shirou/gopsutil/v3/cpu"
@@ -14,13 +15,10 @@ import (
 )
 
 const (
-	defaultInterval     = 10 * time.Second
+	// if a process does not have a value, use the below
 	defaultUsagePercent = 999
-	defaultTime         = 3240000
+	defaultTime         = 3597000 // 999 hours
 	defaultName         = "-------"
-	defaultMaxCPUUsage  = 2.9
-	defaultMaxMemUsage  = 50.0
-	defaultMaxTime      = 6 * time.Minute
 )
 
 const (
@@ -31,6 +29,19 @@ const (
 	cCPU  = "CPU %"
 	cMem  = "MEM %"
 	cTime = "TIME"
+)
+
+var (
+	// cmd line args flags
+	interval       = flag.Duration("i", 10*time.Second, "Interval between each check")
+	sortBy         = flag.String("s", cCPU, "Which column to sort by")
+	sortOrder      = flag.String("o", "dsc", "Sort order. 'asc' or 'dsc'")
+	maxCPU         = flag.Float64("cpu", 70, "Max CPU usage % to trigger notification")
+	maxMem         = flag.Float64("mem", 70, "Max memory usage % to trigger notification")
+	maxTime        = flag.Duration("time", 1*time.Hour, "Max time a process can run before triggering notification")
+	sendGUIMSG     = flag.Bool("gui", true, "To enable or disable GUI notifications. 'notify-send' is needed")
+	sendBCSTMSG    = flag.Bool("bcst", true, "To enable or disable broadcast messages")
+	showInTerminal = flag.Bool("term", false, "Show messages in the same terminal the program is running in (default false)")
 )
 
 func currentTime() string {
@@ -59,7 +70,13 @@ func checkProcesses() (string, error) {
 	printer.SetOutputMirror(output) // save in variable, not stdout
 	printer.AppendHeader(table.Row{cPid, cUser, cName, cCPU, cMem, cTime})
 	printer.SetAutoIndex(true)
-	printer.SortBy([]table.SortBy{{Name: cCPU, Mode: table.Dsc}})
+
+	mode := table.Dsc
+	if strings.EqualFold(*sortOrder, "asc") {
+		mode = table.Asc
+	}
+
+	printer.SortBy([]table.SortBy{{Name: strings.ToUpper(*sortBy), Mode: mode}})
 
 	pids, err := process.Pids()
 	if err != nil {
@@ -70,8 +87,7 @@ func checkProcesses() (string, error) {
 		proc, err := process.NewProcess(pid)
 		if err != nil {
 			// couldn't create process instance. Maybe because it's exited or
-			//permission issues, or something else
-			// just skip it
+			//permission issues, or something else just skip it
 			continue
 		}
 
@@ -95,8 +111,8 @@ func checkProcesses() (string, error) {
 		totalTime := times.System + times.User
 		timeStr := getTimeStr(totalTime)
 
-		if cpuUsage >= defaultMaxCPUUsage || memUsage >= defaultMaxMemUsage ||
-			totalTime >= defaultMaxTime.Seconds() {
+		if cpuUsage >= *maxCPU || memUsage >= float32(*maxMem) ||
+			totalTime >= (*maxTime).Seconds() {
 
 			procName, err := proc.Name()
 			if err != nil {
@@ -120,25 +136,31 @@ func checkProcesses() (string, error) {
 }
 
 func main() {
+	flag.Parse()
 	fmt.Println("Process Tracker started")
-	for range time.Tick(defaultInterval) { // run loop content every defaultInterval seconds
+	for range time.Tick(*interval) { // run loop content every interval seconds
 		output, err := checkProcesses()
 		if err != nil {
-			fmt.Printf("Error while checking proccesses : %v", err)
+			fmt.Printf("Error while attempting to check proccesses : %v", err)
 			fmt.Println("Program will exit now")
 			os.Exit(1)
 		}
 
 		output = strings.TrimSpace(output)
 
-		if output != "" { // there are some "bad" processes, send notification
-			// send GUI notification
-			_, err := exec.Command("notify-send", "-u", "critical", "Some processes are running wild!").Output()
+		if output == "" { // no "bad" processes, nothing to do
+			continue
+		}
+
+		if *sendGUIMSG {
+			_, err = exec.Command("notify-send", "-u", "critical", "Some processes are running wild!").Output()
 			if err != nil {
 				fmt.Println("Couldn't send notification:", err)
 				fmt.Println("Do you have notify-send installed?")
 			}
+		}
 
+		if *sendBCSTMSG {
 			// send broadcast message across logged in shells
 			title := fmt.Sprintf("Process Tracker output at %s\n", currentTime())
 			_, err = exec.Command("wall", title, output).Output()
@@ -146,6 +168,10 @@ func main() {
 				fmt.Println("Couldn't send broadcast message:", err)
 				fmt.Println("Do you have wall installed?")
 			}
+		}
+
+		if *showInTerminal {
+			fmt.Println(output)
 		}
 	}
 }
