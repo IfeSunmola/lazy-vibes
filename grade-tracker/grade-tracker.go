@@ -3,6 +3,8 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"github.com/jedib0t/go-pretty/v6/table"
+	"github.com/jedib0t/go-pretty/v6/text"
 	"os"
 	"strconv"
 	"strings"
@@ -21,6 +23,11 @@ func checkError(e error) {
 	}
 }
 
+func twoDP(num float64) string {
+	//return strconv.FormatFloat(num, 'f', 2, 64)
+	return fmt.Sprintf("%.2f", num)
+}
+
 func main() {
 	if len(os.Args) != 2 {
 		usage("Invalid number of arguments")
@@ -36,13 +43,17 @@ func main() {
 		}
 	}(file)
 
-	fmt.Println("Starting report for", os.Args[1])
-	fmt.Println("========================================================")
-	fmt.Printf("%-15s %10s %10s %19s", "Name", "|achieved", "|possible", "|% of final grade\n")
-	fmt.Println("========================================================")
+	printer := table.NewWriter()
+	printer.SetOutputMirror(os.Stdout)
+	printer.SetAutoIndex(true)
+	printer.SetStyle(table.StyleLight)
+	printer.Style().Options.SeparateRows = true
+	printer.Style().Title.Align = text.AlignCenter
+	printer.SetTitle("Report for " + os.Args[1])
+	printer.AppendHeader(table.Row{"Name", "Achieved", "Possible", "% of final grade", "Actual Achieved"})
 	var (
-		totalAchieved, totalPossible, totalFinal float32
-		lineNum                                  int8
+		totalAchieved, totalPossible, totalFinal, totalActualAchieved float64
+		lineNum                                                       int8
 	)
 
 	scanner := bufio.NewScanner(file)
@@ -51,11 +62,6 @@ func main() {
 		line := scanner.Text()
 
 		if strings.HasPrefix(line, "#") || strings.TrimSpace(line) == "" {
-			continue
-		}
-
-		if strings.HasPrefix(line, "name") {
-			fmt.Println("Report name:", strings.SplitN(line, "=", 2)[1])
 			continue
 		}
 
@@ -77,24 +83,28 @@ func main() {
 		final, err := strconv.ParseFloat(strings.TrimSpace(fields[3]), 32)
 		checkError(err)
 
+		var actualAchieved = (achieved / possible) * final
+
 		if achieved > possible {
-			fmt.Println("Achieved is greater than possible for", name)
+			fmt.Println("Achieved is greater than possible for", name, "on line", lineNum)
 			os.Exit(1)
 		}
-		//fmt.Printf("%-15s %10s %10s %19s", "Name", "|achieved", "|possible", "|% of final grade\n")
-		fmt.Printf("%-15s  |%6.2f    |%7.2f   |%8.2f       |\n", name, achieved, possible, final)
-		fmt.Println("--------------------------------------------------------")
 
-		totalAchieved += float32(achieved)
-		totalPossible += float32(possible)
-		totalFinal += float32(final)
+		printer.AppendRow(table.Row{name, twoDP(achieved), twoDP(possible), twoDP(final), twoDP(actualAchieved)})
+
+		totalAchieved += achieved
+		totalPossible += possible
+		totalFinal += final
+		totalActualAchieved += actualAchieved
 	}
+
+	printer.AppendFooter(table.Row{"Total", twoDP(totalAchieved), twoDP(totalPossible), twoDP(totalFinal), twoDP(totalActualAchieved)})
+	printer.Render()
 
 	if totalFinal > 100 {
 		fmt.Println("WARNING: Total % final grade is greater than 100%")
 		fmt.Println("----------------------------------------------------")
 	}
 
-	total := (totalAchieved / totalPossible) * totalFinal
-	fmt.Printf("You currently have %.2f out of %.2f\n", total, totalFinal)
+	fmt.Println("You currently have", twoDP(totalActualAchieved), "out of", twoDP(totalFinal))
 }
