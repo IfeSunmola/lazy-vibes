@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
+	"math"
 	"os"
 	"strconv"
 	"strings"
@@ -83,11 +84,15 @@ func main() {
 		final, err := strconv.ParseFloat(strings.TrimSpace(fields[3]), 32)
 		checkError(err)
 
-		var actualAchieved = (achieved / possible) * final
-
 		if achieved > possible {
 			fmt.Println("Achieved is greater than possible for", name, "on line", lineNum)
 			os.Exit(1)
+		}
+
+		var actualAchieved = (achieved / possible) * final
+
+		if math.IsNaN(actualAchieved) {
+			actualAchieved = 0
 		}
 
 		printer.AppendRow(table.Row{name, twoDP(achieved), twoDP(possible), twoDP(final), twoDP(actualAchieved)})
