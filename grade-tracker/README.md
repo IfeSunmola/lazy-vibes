@@ -1,4 +1,4 @@
-I could have done all this with awk in less than 6 lines smh. Just trying to get conformable with Go's
+I could have done all this with awk in less than 6 lines. Just trying to get conformable with Go's
 syntax.
 
 # Grade Tracker
@@ -9,7 +9,7 @@ any way to save the grades.
 
 ## Usage
 
-`./proc-tracker-platform-arch <path_to_file>`
+`./grade-tracker-platform-arch <path_to_file>`
 
 The file:
 
