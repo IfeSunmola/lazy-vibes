@@ -3,24 +3,23 @@ import time
 
 # See README.md for more info about these constants.
 
-RECYCLE_POS = "190 1081"
-HOLD_RECYCLE_POS = "513 1756"
+RECYCLE_POS = "221 1071"
+HOLD_RECYCLE_POS = "544 1715"
 
 
 def connect():
-    _client = AdbClient(host="127.0.0.1", port=5037)
-
-    devices = _client.devices()
+    client = AdbClient()
+    devices = client.devices()
 
     if len(devices) == 0:
         print('No devices')
         quit()
 
-    _device = devices[0]
+    device = devices[0]
 
-    print(f'Connected to {_device}')
+    print(f'Connected to the first device: {device}')
 
-    return _device, _client
+    return device, client
 
 
 def start_recycle(recycle_num=1):
@@ -28,11 +27,14 @@ def start_recycle(recycle_num=1):
 
     for i in range(recycle_num):
         device.shell(f"input tap {RECYCLE_POS}")  # recycle button
-        time.sleep(2)  # wait for recycle screen to load
-        device.shell(f"input touchscreen swipe {HOLD_RECYCLE_POS} {HOLD_RECYCLE_POS} 5000")  # hold down recycle button
-        time.sleep(3)  # wait to get back to recycle screen
+        time.sleep(1)  # wait for recycle screen to load
+        device.shell(
+            f"input touchscreen swipe {HOLD_RECYCLE_POS} {HOLD_RECYCLE_POS} 5000"
+        )  # hold down recycle button
+        print(f"Recycled {i + 1}/{recycle_num}")
+        time.sleep(1)  # wait to get back to recycle screen
 
 
 if __name__ == '__main__':
-    num_to_recycle = input("Amount of furnitures to recycle: ")
+    num_to_recycle = input("Amount of furniture's to recycle: ")
     start_recycle(int(num_to_recycle))
